@@ -1,0 +1,15 @@
+[Unit]
+Description=Kazbek Telegram Business Assistant
+After=network.target
+
+[Service]
+Type=simple
+User=CHANGE_ME
+WorkingDirectory=CHANGE_ME
+EnvironmentFile=CHANGE_ME/.env
+ExecStart=CHANGE_ME/.venv/bin/python -m app.main
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
