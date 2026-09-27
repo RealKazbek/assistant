@@ -1,6 +1,8 @@
 import time
 from pathlib import Path
+
 import aiosqlite
+
 
 class Database:
     def __init__(self, path: str): self.path, self.conn = path, None

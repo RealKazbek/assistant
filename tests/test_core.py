@@ -1,6 +1,9 @@
 import pytest
+
 from app.config import load_settings
 from app.services.rate_limit import RateLimiter
+
+
 def test_config(monkeypatch):
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN","x"); monkeypatch.setenv("DEEPSEEK_API_KEY","y"); monkeypatch.setenv("OWNER_TELEGRAM_ID","7"); assert load_settings().owner_telegram_id==7
 def test_rate_limit():
@@ -18,6 +21,7 @@ async def test_duplicate(tmp_path):
 @pytest.mark.asyncio
 async def test_handoff(tmp_path):
     import time
+
     from app.db.database import Database
     d=Database(str(tmp_path/"x.db")); await d.connect(); await d.save_message(1,"user","x"); await d.set_handoff(1,time.time()+60); assert await d.handoff_active(1); await d.close()
 
@@ -31,6 +35,7 @@ async def test_persistent_controls_and_profile(tmp_path):
 @pytest.mark.asyncio
 async def test_profile_is_in_prompt():
     from unittest.mock import AsyncMock
+
     from app.services.deepseek import DeepSeekService
     class S: deepseek_api_key="x"; deepseek_base_url="http://localhost"; deepseek_model="m"; max_output_tokens=3
     async def profile(): return {"role":"Developer"}
@@ -43,7 +48,16 @@ def test_reply_wait_never_adds_delay_after_slow_generation():
     assert 4 <= reply_wait(0, 0, 4, 6, rng=lambda a,b: a) <= 4
 
 def test_personal_and_language_classifier():
-    from app.services.classifier import classify_intent, language_supported, personal_fallback, identity_reply, control_action, is_symbol_only, symbol_reply, simple_reply
+    from app.services.classifier import (
+        classify_intent,
+        control_action,
+        identity_reply,
+        is_symbol_only,
+        language_supported,
+        personal_fallback,
+        simple_reply,
+        symbol_reply,
+    )
     assert classify_intent("где ты?")=="personal"
     assert classify_intent("где ты? сайт нужен")=="business"
     assert classify_intent("ты спишь?")=="personal"
@@ -79,5 +93,6 @@ async def test_structured_memory_extracts_and_survives_restart(tmp_path):
 @pytest.mark.asyncio
 async def test_conversation_mode_uses_last_ai_reply(tmp_path):
     import time
+
     from app.db.database import Database
     d=Database(str(tmp_path/"mode.db")); await d.connect(); await d.save_message(1,"user","привет"); assert not await d.conversation_active(1,60); await d.save_message(1,"assistant","привет)"); assert await d.conversation_active(1,60); await d.conn.execute("UPDATE conversations SET last_activity_at=? WHERE chat_id=?",(time.time()-61*60,1)); await d.conn.commit(); assert not await d.conversation_active(1,60); await d.close()

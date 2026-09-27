@@ -1,4 +1,3 @@
-from app.db.database import Database
 
 CARDS=[
 ('profile.about','profile','About Kazbek','Kazbek is a software developer focused on web development, backend systems, Telegram bots, automation, APIs, and full-stack applications. Works with Python, Go, JavaScript, TypeScript, React, Next.js, FastAPI, Django, PostgreSQL, Docker, VPS, GitHub and CI/CD. Does not normally take mobile apps, 1C, WordPress, or standalone UI/UX from scratch. Can implement from Figma, references, screenshots, or existing designs.','kazbek developer python react telegram',60),

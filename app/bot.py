@@ -1,13 +1,28 @@
-import asyncio, logging, time
+import asyncio
+import logging
+import time
+
 from aiogram import Bot, Dispatcher, Router
-from aiogram.filters import Command
 from aiogram.enums import ChatAction
-from aiogram.types import BusinessConnection, Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
-from aiogram.types import BotCommandScopeChat
 from aiogram.exceptions import TelegramBadRequest
+from aiogram.filters import Command
+from aiogram.types import (
+ BotCommand,
+ BotCommandScopeChat,
+ BusinessConnection,
+ CallbackQuery,
+ InlineKeyboardButton,
+ InlineKeyboardMarkup,
+ Message,
+)
+
+from app.services.classifier import (
+ control_action,
+ detect_language,
+ language_supported,
+)
 from app.services.rate_limit import RateLimiter
-from app.services.timing import reply_wait
-from app.services.classifier import classify_intent, detect_language, language_supported, personal_fallback, unsupported_fallback, control_action, is_symbol_only, symbol_reply, simple_reply
+
 log=logging.getLogger(__name__); FALLBACK="что-то сейчас ответ не проходит, Казбек позже сам ответит)"
 DEFAULT_PROFILE={"name":"Kazbek","role":"Software Developer","specialization":"Frontend / Full-stack Development","languages":"Russian, Kazakh, English","services":"Websites, landing pages, corporate websites, React, Next.js, TypeScript, FastAPI, APIs, PostgreSQL, Telegram bots, automation, integrations, dashboards, MVP products, custom web applications","portfolio":"https://realkazbek.site","telegram":"@realkazbek","github":"https://github.com/RealKazbek","project_pixel_lane":"Smart-city traffic management and simulation platform","project_nexttrade":"Full-stack trading-related project","pricing_policy":"Do not invent prices. Ask for project scope and requirements first.","availability_policy":"Do not promise availability or deadlines without Kazbek confirming personally."}
 HANDOFF=("позови казбека","хочу поговорить с казбеком","пусть казбек ответит","нужен сам казбек","қазбекті шақыр","қазбекпен сөйлескім келеді","let me talk to kazbek","i want to speak to kazbek","kazbek personally")
@@ -117,7 +132,7 @@ class App:
    if len(p)>1: await self.db.trusted_remove(p[1]); await m.answer('Trusted contact removed.')
  async def trusted_info(self,m):
   if await self.owner(m):
-   p=(m.text or '').split(); r=await self.db.trusted_get(p[1]) if len(p)>1 else None; await m.answer((f"{r['display_name'] or 'Contact'}\nuser_id: {r['telegram_user_id']}\nchat_id: {r['chat_id']}\nusername: @{r['username'] or '-'}\nnote: {r['note'] or '-'}" if r else 'Not found'))
+   p=(m.text or '').split(); r=await self.db.trusted_get(p[1]) if len(p)>1 else None; await m.answer(f"{r['display_name'] or 'Contact'}\nuser_id: {r['telegram_user_id']}\nchat_id: {r['chat_id']}\nusername: @{r['username'] or '-'}\nnote: {r['note'] or '-'}" if r else 'Not found')
  async def trusted_note(self,m):
   if await self.owner(m):
    p=(m.text or '').split(maxsplit=2)
@@ -163,7 +178,7 @@ class App:
    if len(p)>2: await self.db.save_memory(int(p[1]),lead_status=p[2]); await m.answer('Lead status updated.')
  async def daily_report(self,m,day=None):
   if await self.owner(m) and self.report:
-   text,date,chats,messages=await self.report.build(day); await m.answer(text[:4000]);
+   text,_date,_chats,_messages=await self.report.build(day); await m.answer(text[:4000]);
  async def daily_report_yesterday(self,m):
   from datetime import timedelta
   await self.daily_report(m,(__import__('datetime').datetime.now(self.report.tz).date()-timedelta(days=1)))
@@ -189,7 +204,7 @@ class App:
   if not rows:return
   r=await self.db.chat(chat_id)
   if not r or r['manual_pause_until'] and r['manual_pause_until']>time.time() or not r['ai_enabled'] or r['handoff_requested'] or not await self.global_on(): return
-  allowed,notify=self.limiter.allow(r['user_id'] or chat_id)
+  allowed,_notify=self.limiter.allow(r['user_id'] or chat_id)
   if not allowed:return
   text="Client sent several messages:\n"+"\n".join(f"- {x['content']}" for x in rows)
   await self.typing_for_chat(r)
@@ -252,7 +267,6 @@ class App:
   await self.chat_callback(q,["admin","chat",str(chat)])
  async def handle_business(self,m):
   try:
-   started=time.monotonic()
    if not m.business_connection_id or not m.chat or m.chat.type!="private" or not m.from_user:return
    key=f"business:{m.business_connection_id}:{m.chat.id}:{m.message_id}";
    if await self.db.seen(key):return
@@ -260,7 +274,7 @@ class App:
    text=m.text or m.caption; log.info("business message chat=%s user=%s chars=%s",m.chat.id,m.from_user.id,len(text or ""))
    if not text:return
    lowered=text.lower().strip(); previous=(await self.db.chat(m.chat.id))['language']
-   lang,confidence=detect_language(text,previous); supported,_,_=language_supported(text)
+   lang,confidence=detect_language(text,previous); _supported,_,_=language_supported(text)
    if confidence: await self.db.set_chat(m.chat.id,language=lang)
    control=control_action(text); sender_business_bot=getattr(m,'sender_business_bot',None); bot_generated=bool(sender_business_bot) or (m.from_user and m.from_user.id==self.bot.id); owner_message=m.from_user.id==self.settings.owner_telegram_id and not bot_generated
    if control=='stop':

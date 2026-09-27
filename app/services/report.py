@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
+
 class DailyReport:
     def __init__(self,db,settings): self.db=db; self.settings=settings; self.tz=ZoneInfo(settings.app_timezone)
     def bounds(self,day=None):

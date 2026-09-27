@@ -1,13 +1,17 @@
-import asyncio, logging
+import asyncio
+import logging
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+
+from app.bot import App
 from app.config import load_settings
 from app.db.database import Database
 from app.services.deepseek import DeepSeekService
-from app.bot import App
 from app.services.knowledge import KnowledgeService
 from app.services.memory import MemoryService
 from app.services.report import DailyReport
+
+
 async def main():
     s=load_settings(); logging.basicConfig(level=getattr(logging,s.log_level.upper(),logging.INFO),format="%(asctime)s %(levelname)s %(name)s %(message)s")
     db=Database(s.database_path); await db.connect(); kb=KnowledgeService(db); memory=MemoryService(db,s); report=DailyReport(db,s); app=App(s,db,None,kb,memory,report); await app.start(); ai=DeepSeekService(s,db.profile_all,kb,memory); app.ai=ai

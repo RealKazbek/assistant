@@ -1,5 +1,7 @@
 import time
 from collections import defaultdict, deque
+
+
 class RateLimiter:
     def __init__(self, limit, window): self.limit=limit; self.window=window; self.events=defaultdict(deque); self.notified=set()
     def allow(self, user_id):

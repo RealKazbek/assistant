@@ -1,6 +1,10 @@
-import asyncio, logging
+import asyncio
+import logging
+
 from openai import AsyncOpenAI
+
 from app.prompts.assistant import BASE_SYSTEM_PROMPT, profile_context
+
 log=logging.getLogger(__name__)
 class DeepSeekService:
     def __init__(self, settings, profile_loader=None, knowledge=None, memory=None): self.settings=settings; self.profile_loader=profile_loader; self.knowledge=knowledge; self.memory=memory; self.client=AsyncOpenAI(api_key=settings.deepseek_api_key,base_url=settings.deepseek_base_url,timeout=30,max_retries=0)
@@ -14,7 +18,7 @@ class DeepSeekService:
                 layered=BASE_SYSTEM_PROMPT+profile_context(basics)+"\n\nRelevant Kazbek knowledge:\n"+knowledge+"\n\nConversation memory:\n"+memory
                 r=await self.client.chat.completions.create(model=self.settings.deepseek_model,messages=[{"role":"system","content":layered},*history[-getattr(self.settings,'recent_message_limit',6):]],temperature=0.6,max_tokens=self.settings.max_output_tokens)
                 return (r.choices[0].message.content or "").strip()
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - retry all provider/network failures
                 log.warning("DeepSeek request failed attempt=%s error=%s",attempt+1,type(e).__name__)
                 if attempt<2: await asyncio.sleep(2**attempt)
         return None
